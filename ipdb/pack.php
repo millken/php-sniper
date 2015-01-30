@@ -43,7 +43,7 @@ $pack = array();
 $blc = file_get_contents('blc.csv');
 foreach(explode("\n", $blc) as $b) {
 	if(empty($b)) break;
-	list($cidr, $id) = explode(",", $b);
+	list($cidr, $id) = explode("\t", $b);
 	list($ip, $mask) = explode("/", $cidr);
 	//echo "$ip  --- $mask\n";
 	++$rec_total;
@@ -56,13 +56,13 @@ $loc = file_get_contents('loc.csv');
 
 foreach(explode("\n", $loc) as $l) {
 	if(empty($l)) break;
-	list($id, $dcn) = explode(",", $l);
+	list($id, $dcn) = explode("\t", $l, 2);
 	++$dc_total;
 	$pack['datacenter'] .= pack("na32", $id, $dcn);
 	
 }
 
-$pack['head'] = pack("NNn", 20141212, $rec_total, $dc_total);
+$pack['head'] = pack("NNn", 20150130, $rec_total, $dc_total);
 
 fwrite($fp, $pack['head']. $pack['record'] . $pack['datacenter']);
 fclose($fp);
