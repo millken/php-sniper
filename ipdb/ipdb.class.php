@@ -70,11 +70,41 @@ class Ipdb {
 		}
 		return $ret;
 	}
+	
+	public function get_datacenters() {
+		if(is_null(self::$head)) {
+			$this->load();
+		}
+		return self::$datacenter;
+	}
+	
+	public function get_datacenter($id) {
+		$cidrs = array();
+		if(is_null(self::$head)) {
+			$this->load();
+		}
+
+		if(!isset(self::$datacenter[$id])) {
+			return $cidrs;
+		}
+		for($i = 0; $i < self::$head['rec_len']; $i++) {
+			$rec_pack = substr(self::$dbbody, 10 + $i * 7, 7);
+			$record = unpack("Nip/Cmask/nid", $rec_pack);
+			if($record['id'] == $id) {
+				$ip1 = long2ip($record['ip']);
+				$cidrs[] = "{$ip1}/{$record['mask']}";
+			}
+		}
+		return $cidrs;
+	}
 }
 /*
 $test = new Ipdb();
 $test->load();
 echo $test->find('1.0.38.0');
 print_r($test->lookup('www.qq.com'));
+
+print_r($test->get_datacenters());
+print_r($test->get_datacenter(152));
 */
 ?>
