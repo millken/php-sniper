@@ -11,7 +11,11 @@ $fpw = fopen(__DIR__ . '/17mon-201707.txt', 'wb');
 $s2 = 0;
 
 $n = 1;
-define("WRITE", false);
+define("WRITE_FILE", true);
+define("MAX_NUM", 10000000);
+//ip=# copy "17mon" ("ipStart", "ipEnd","country", "province", "city", "org", "isp", "latitude", "longitude", "timezone", "utc", "chinacode", "phonecode", "iso2", "continent") from '/tmp/17mon-201707.txt';
+//COPY 2971758
+
 for ($start =  262144; $start < $max_comp_len; $start += 9)
 {
 	$s1 = unpack('Nlen', $index{$start} . $index{$start + 1} . $index{$start + 2} . $index{$start + 3});
@@ -24,10 +28,11 @@ for ($start =  262144; $start < $max_comp_len; $start += 9)
         fseek($fp, $offset['len'] + $index_offset['len'] - 262144);
 		$content .= fread($fp, $index_length['len']);
 		$s2 = $s1['len'] + 1;
+
 		//if(strpos($content, "中国") === false) continue;
-        if(WRITE)fwrite($fpw, $content . "\n");
+        if(WRITE_FILE)fwrite($fpw, $content . "\n");
         ++$n;
-	    //if($n > 100000) 	break;
+	    if($n > MAX_NUM) 	break;
 }
 
 echo $n;
