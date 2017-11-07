@@ -1,14 +1,9 @@
 <?php
 /*
 
-blc.csv 
 net,continent,country,area,province,city,isp
 1.0.1.0/24,13
 1.0.2.0/23,13
-..
-loc.csv
-1,beijingdx
-2,tianjindx
 ..
 
 uint_8  ----  0-255
@@ -55,40 +50,99 @@ isp {
 }
  */
 
-$fp = fopen(__DIR__ . '/db.dat', 'wb');
+$fp = fopen(__DIR__ . '/dbv2.dat', 'wb');
 
-$ids = array();
 
-$rec_total = 0;
-$dc_total = 0;
+$params= ['host'=> '127.0.0.1', 'port'=>5432, 'database'=>'ip', 'user'=>'postgres', 'password'=>'admin'];
 
-$pack = array();
+$conStr = sprintf("pgsql:host=%s;port=%d;dbname=%s;user=%s;password=%s", 
+        $params['host'], 
+        $params['port'], 
+        $params['database'], 
+        $params['user'], 
+        $params['password']);
 
-$blc = file_get_contents('blc.csv');
-foreach(explode("\n", $blc) as $b) {
-	if(empty($b)) break;
-	list($cidr, $id) = explode("\t", $b);
-	list($ip, $mask) = explode("/", $cidr);
-	//echo "$ip  --- $mask\n";
-	++$rec_total;
+try {
+	$pdo = new \PDO($conStr);
+	$pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+} catch (\PDOException $e) {
+    die($e->getMessage());
+}
+
+/*continent*/
+$continent = ['total'=>0, 'data'=>''];
+$query=$pdo->prepare('SELECT id,code FROM "public"."continent" ORDER BY "id";');
+$query->execute();
+while($row = $query->fetch(PDO::FETCH_ASSOC))
+{
+    ++$continent['total'];
+	$continent['data'] .= pack("Na2", $row['id'], $row['code']);
+}
+
+/* country*/
+$country = ['total'=>0, 'data'=>''];
+$query=$pdo->prepare('SELECT id,code FROM "public"."country" ORDER BY "id";');
+$query->execute();
+while($row = $query->fetch(PDO::FETCH_ASSOC))
+{
+    ++$country['total'];
+	$country['data'] .= pack("Na2", $row['id'], $row['code']);
+}
+
+/* area*/
+$area = ['total'=>0, 'data'=>''];
+$query=$pdo->prepare('SELECT id,zh FROM "public"."area" ORDER BY "id";');
+$query->execute();
+while($row = $query->fetch(PDO::FETCH_ASSOC))
+{
+    ++$area['total'];
+	$area['data'] .= pack("Na64", $row['id'], $row['zh']);
+}
+
+/* region*/
+$region = ['total'=>0, 'data'=>''];
+$query=$pdo->prepare('SELECT id,zh FROM "public"."region" ORDER BY "id";');
+$query->execute();
+while($row = $query->fetch(PDO::FETCH_ASSOC))
+{
+    ++$region['total'];
+	$region['data'] .= pack("Na64", $row['id'], $row['zh']);
+}
+
+/* city*/
+$city = ['total'=>0, 'data'=>''];
+$query=$pdo->prepare('SELECT id,zh FROM "public"."city" ORDER BY "id";');
+$query->execute();
+while($row = $query->fetch(PDO::FETCH_ASSOC))
+{
+    ++$city['total'];
+	$city['data'] .= pack("Na64", $row['id'], $row['zh']);
+}
+
+/* isp*/
+$isp = ['total'=>0, 'data'=>''];
+$query=$pdo->prepare('SELECT id,zh FROM "public"."isp" ORDER BY "id";');
+$query->execute();
+while($row = $query->fetch(PDO::FETCH_ASSOC))
+{
+    ++$isp['total'];
+	$isp['data'] .= pack("Na64", $row['id'], $row['zh']);
+}
+
+$net = ['total'=>0, 'data'=>''];
+$query=$pdo->prepare('SELECT cidr,continent_id,country_id,area_id,region_id,city_id,isp_id FROM "public"."net" ORDER BY "id";');
+$query->execute();
+while($row = $query->fetch(PDO::FETCH_ASSOC))
+{
+    ++$net['total'];
+	list($ip, $mask) = explode("/", $row['cidr']);
 	$longip = ip2long($ip);
-	$pack['record'] .= pack("NCn", $longip, $mask, $id);
-	
+	$net['data'] .= pack("NCNNNNNN", $longip, $mask, $row['continent_id'],$row['country_id'], $row['area_id'],$row['region_id'],$row['city_id'],$row['isp_id']);
 }
 
-$loc = file_get_contents('loc.csv');
+$head = pack("NNNNNNNN", 20171107, $continent['total'], $country['total'], $area['total'], $region['total'], $city['total'],  $isp['total'], $net['total']);
 
-foreach(explode("\n", $loc) as $l) {
-	if(empty($l)) break;
-	list($id, $dcn) = explode("\t", $l, 2);
-	++$dc_total;
-	$pack['datacenter'] .= pack("na32", $id, $dcn);
-	
-}
-
-$pack['head'] = pack("NNn", 20150130, $rec_total, $dc_total);
-
-fwrite($fp, $pack['head']. $pack['record'] . $pack['datacenter']);
+fwrite($fp, $head. $continent['data'] .$country['data']. $area['data']. $region['data']. $city['data']. $isp['data'] .$net['data'] );
 fclose($fp);
 
 

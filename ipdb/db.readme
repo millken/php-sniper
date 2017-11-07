@@ -1,0 +1,19 @@
+#insert into net ("startLong","endLong") select b."ipStart",b."ipEnd" from "17mon" as b where country='中国';
+
+country code from
+https://github.com/armetiz/SQL-Countries-ISO-3166-1/blob/master/countries_iso3166-1.sql
+
+中国行政区 https://baike.baidu.com/item/%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81
+
+update net.region_id
+update "net" set region_id= t3.region_id from (select "startLong",t2.province,(select id from region where zh=t2.province) as region_id FROM net as t1,"17mon" as t2 where t1."startLong" = t2."ipStart") as t3 where net."startLong"=t3."startLong"
+
+update net.area_id
+update "net"  set area_id=t2.area_id from "region" as t2 where region_id=t2.id
+
+update net.isp_id
+
+update "net" set isp_id= t3.isp_id from (select "startLong",t2.province,(select id from isp where zh=t2.isp) as isp_id FROM net as t1,"17mon" as t2 where t1."startLong" = t2."ipStart") as t3 where net."startLong"=t3."startLong"
+
+update net.cidr
+update net set cidr=inet_merge('0.0.0.0'::inet + "startLong", '0.0.0.0'::inet + "endLong")
