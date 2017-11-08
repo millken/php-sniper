@@ -76,7 +76,7 @@ $query->execute();
 while($row = $query->fetch(PDO::FETCH_ASSOC))
 {
     ++$continent['total'];
-	$continent['data'] .= pack("Na2", $row['id'], $row['code']);
+	$continent['data'] .= pack("na2", $row['id'], $row['code']);
 }
 
 /* country*/
@@ -86,7 +86,7 @@ $query->execute();
 while($row = $query->fetch(PDO::FETCH_ASSOC))
 {
     ++$country['total'];
-	$country['data'] .= pack("Na2", $row['id'], $row['code']);
+	$country['data'] .= pack("na2", $row['id'], $row['code']);
 }
 
 /* area*/
@@ -96,7 +96,7 @@ $query->execute();
 while($row = $query->fetch(PDO::FETCH_ASSOC))
 {
     ++$area['total'];
-	$area['data'] .= pack("Na64", $row['id'], $row['zh']);
+	$area['data'] .= pack("na64", $row['id'], $row['zh']);
 }
 
 /* region*/
@@ -106,7 +106,7 @@ $query->execute();
 while($row = $query->fetch(PDO::FETCH_ASSOC))
 {
     ++$region['total'];
-	$region['data'] .= pack("Na64", $row['id'], $row['zh']);
+	$region['data'] .= pack("na64", $row['id'], $row['zh']);
 }
 
 /* city*/
@@ -116,7 +116,7 @@ $query->execute();
 while($row = $query->fetch(PDO::FETCH_ASSOC))
 {
     ++$city['total'];
-	$city['data'] .= pack("Na64", $row['id'], $row['zh']);
+	$city['data'] .= pack("na64", $row['id'], $row['zh']);
 }
 
 /* isp*/
@@ -126,23 +126,45 @@ $query->execute();
 while($row = $query->fetch(PDO::FETCH_ASSOC))
 {
     ++$isp['total'];
-	$isp['data'] .= pack("Na64", $row['id'], $row['zh']);
+	$isp['data'] .= pack("na64", $row['id'], $row['zh']);
 }
 
 $net = ['total'=>0, 'data'=>''];
-$query=$pdo->prepare('SELECT cidr,continent_id,country_id,area_id,region_id,city_id,isp_id FROM "public"."net" ORDER BY "id";');
+
+$net['total']=$pdo->query('SELECT count(*) FROM net where country_id=46')->fetchColumn();
+
+$head = pack("NnnnnnnN", 20171107, $continent['total'], $country['total'], $area['total'], $region['total'], $city['total'],  $isp['total'], $net['total']);
+fwrite($fp, $head. $continent['data'] .$country['data']. $area['data']. $region['data']. $city['data']. $isp['data']);
+
+function t($a){return 0;}
+$ipindex = array_map('t',range(0, 255));
+
+//$net_pos_start = strlen($head) + $continent['total'] * 4 +  $country['total'] * 4 + $area['total'] * 66 + $region['total'] * 66 + $city['total'] * 66 + $isp['total'] * 66;
+
+$query=$pdo->prepare('SELECT cidr,continent_id,country_id,area_id,region_id,city_id,isp_id FROM "public"."net" where country_id=46 ORDER BY "id";');
 $query->execute();
+$i = 0;
 while($row = $query->fetch(PDO::FETCH_ASSOC))
 {
-    ++$net['total'];
+    
 	list($ip, $mask) = explode("/", $row['cidr']);
 	$longip = ip2long($ip);
-	$net['data'] .= pack("NCNNNNNN", $longip, $mask, $row['continent_id'],$row['country_id'], $row['area_id'],$row['region_id'],$row['city_id'],$row['isp_id']);
+	if($ipindex[$longip>>24] == 0) {
+		$ipindex[$longip>>24] = $i;
+	}
+	$packet = pack("NCnnnnnn", $longip, $mask, $row['continent_id'],$row['country_id'], $row['area_id'],$row['region_id'],$row['city_id'],$row['isp_id']);
+	fwrite($fp, $packet);
+	++$i;
 }
 
-$head = pack("NNNNNNNN", 20171107, $continent['total'], $country['total'], $area['total'], $region['total'], $city['total'],  $isp['total'], $net['total']);
+//创建256个索引坐标，加快查询速度
+foreach($ipindex as $id=>$pos) {
+	$packet = pack("N", $pos);
+	fwrite($fp, $packet);
+}
 
-fwrite($fp, $head. $continent['data'] .$country['data']. $area['data']. $region['data']. $city['data']. $isp['data'] .$net['data'] );
+
+
 fclose($fp);
 
 
