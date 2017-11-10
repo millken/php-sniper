@@ -91,42 +91,42 @@ while($row = $query->fetch(PDO::FETCH_ASSOC))
 
 /* area*/
 $area = ['total'=>0, 'data'=>''];
-$query=$pdo->prepare('SELECT id,zh FROM "public"."area" ORDER BY "id";');
+$query=$pdo->prepare('SELECT id,en FROM "public"."area" ORDER BY "id";');
 $query->execute();
 while($row = $query->fetch(PDO::FETCH_ASSOC))
 {
     ++$area['total'];
-	$area['data'] .= pack("na64", $row['id'], $row['zh']);
+	$area['data'] .= pack("na64", $row['id'], $row['en']);
 }
 
 /* region*/
 $region = ['total'=>0, 'data'=>''];
-$query=$pdo->prepare('SELECT id,zh FROM "public"."region" ORDER BY "id";');
+$query=$pdo->prepare('SELECT id,en FROM "public"."region" ORDER BY "id";');
 $query->execute();
 while($row = $query->fetch(PDO::FETCH_ASSOC))
 {
     ++$region['total'];
-	$region['data'] .= pack("na64", $row['id'], $row['zh']);
+	$region['data'] .= pack("na64", $row['id'], $row['en']);
 }
 
 /* city*/
 $city = ['total'=>0, 'data'=>''];
-$query=$pdo->prepare('SELECT id,zh FROM "public"."city" ORDER BY "id";');
+$query=$pdo->prepare('SELECT id,en FROM "public"."city" ORDER BY "id";');
 $query->execute();
 while($row = $query->fetch(PDO::FETCH_ASSOC))
 {
     ++$city['total'];
-	$city['data'] .= pack("na64", $row['id'], $row['zh']);
+	$city['data'] .= pack("na64", $row['id'], $row['en']);
 }
 
 /* isp*/
 $isp = ['total'=>0, 'data'=>''];
-$query=$pdo->prepare('SELECT id,zh FROM "public"."isp" ORDER BY "id";');
+$query=$pdo->prepare('SELECT id,en FROM "public"."isp" ORDER BY "id";');
 $query->execute();
 while($row = $query->fetch(PDO::FETCH_ASSOC))
 {
     ++$isp['total'];
-	$isp['data'] .= pack("na64", $row['id'], $row['zh']);
+	$isp['data'] .= pack("na64", $row['id'], $row['en']);
 }
 
 $net = ['total'=>0, 'data'=>''];
