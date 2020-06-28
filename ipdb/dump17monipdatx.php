@@ -1,12 +1,12 @@
 <?php
-$fp = fopen('/run/media/millken/09a7d751-1ed0-48f0-9240-c67c262700dd/millken/mydata4vipday2.datx', 'rb');
+$fp = fopen('ipdatabase.datx', 'rb');
 $offset = unpack('Nlen', fread($fp, 4));
 $index = fread($fp, $offset['len'] - 4);
 print_r($offset);
 $max_comp_len = $offset['len'] - 262144 - 4;
 echo $max_comp_len . "\n";
 
-$fpw = fopen(__DIR__ . '/17mon-201707.txt', 'wb');
+$fpw = fopen(__DIR__ . '/17mon-202006.txt', 'wb');
 
 $s2 = 0;
 
