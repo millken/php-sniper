@@ -1,25 +1,19 @@
 <?php
-/********************************
-Simple PHP File Manager
-Copyright John Campbell (jcampbell1)
-
-Liscense: MIT
-********************************/
-
 //Disable error report for undefined superglobals
 error_reporting( error_reporting() & ~E_NOTICE );
 
 //Security options
 $allow_delete = true; // Set to false to disable delete button and delete POST request.
+$allow_download = true;// Set to true to allow download files
 $allow_upload = true; // Set to true to allow upload files
 $allow_create_folder = true; // Set to false to disable folder creation
-$allow_direct_link = true; // Set to false to only allow downloads and not direct link
+$allow_direct_link = false; // Set to false to only allow downloads and not direct link
 $allow_show_folders = true; // Set to false to hide all subdirectories
 
 $disallowed_patterns = ['*.php'];  // must be an array.  Matching files not allowed to be uploaded
 $hidden_patterns = ['*.php','.*']; // Matching files hidden in directory index
 
-$PASSWORD = '';  // Set the password, to access the file manager... (optional)
+$PASSWORD = 'admin';  // Set the password, to access the file manager... (optional)
 
 if($PASSWORD) {
 
@@ -31,7 +25,7 @@ if($PASSWORD) {
 			$_SESSION['_sfm_allowed'] = true;
 			header('Location: ?');
 		}
-		echo '<html><body><form action=? method=post>PASSWORD:<input type=password name=p autofocus/></form></body></html>';
+		echo '<html><body><form action=? method=post>密码:<input type=password name=p autofocus/></form></body></html>';
 		exit;
 	}
 }
@@ -111,14 +105,14 @@ if($_GET['do'] == 'list') {
 } elseif ($_POST['do'] == 'upload' && $allow_upload) {
 	foreach($disallowed_patterns as $pattern)
 		if(fnmatch($pattern, $_FILES['file_data']['name']))
-			err(403,"Files of this type are not allowed.");
+			err(403,"该类型文件已被禁用");
 
 	$res = move_uploaded_file($_FILES['file_data']['tmp_name'], $file.'/'.$_FILES['file_data']['name']);
 	exit;
-} elseif ($_GET['do'] == 'download') {
+} elseif ($_GET['do'] == 'download' && $allow_download) {
 	foreach($disallowed_patterns as $pattern)
 		if(fnmatch($pattern, $file))
-			err(403,"Files of this type are not allowed.");
+			err(403,"该类型文件已被禁用");
 
 	$filename = basename($file);
 	$finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -232,6 +226,7 @@ a:hover {text-decoration: underline}
 .sort_hide{ display:none;}
 table {border-collapse: collapse;width:100%;}
 thead {max-width: 1024px}
+tbody tr:hover{background-color: #ccc;}
 td { padding:.2em 1em .2em .2em; border-bottom:1px solid #def;height:30px; font-size:12px;white-space: nowrap;}
 td.first {font-size:14px;white-space: normal;}
 td.empty { color:#777; font-style: italic; text-align: center;padding:3em 0;}
@@ -255,7 +250,7 @@ a.delete {display:inline-block;
 	padding:4px 0 4px 20px;
 }
 </style>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+<script src="//apps.bdimg.com/libs/jquery/1.8.2/jquery.min.js"></script>
 <script>
 (function($){
 	$.fn.tablesorter = function() {
@@ -307,9 +302,11 @@ $(function(){
 	$('#table').tablesorter();
 
 	$('#table').on('click','.delete',function(data) {
-		$.post("",{'do':'delete',file:$(this).attr('data-file'),xsrf:XSRF},function(response){
-			list();
-		},'json');
+		if(confirm("确定删除？")){
+			$.post("",{'do':'delete',file:$(this).attr('data-file'),xsrf:XSRF},function(response){
+				list();
+			},'json');			
+		}
 		return false;
 	});
 
@@ -399,7 +396,7 @@ $(function(){
 				$.each(data.results,function(k,v){
 					$tbody.append(renderFileRow(v));
 				});
-				!data.results.length && $tbody.append('<tr><td class="empty" colspan=5>This folder is empty</td></tr>')
+				!data.results.length && $tbody.append('<tr><td class="empty" colspan=5>空文件夹</td></tr>')
 				data.is_writable ? $('body').removeClass('no_write') : $('body').addClass('no_write');
 			} else {
 				console.warn(data.error.msg);
@@ -413,13 +410,14 @@ $(function(){
 			.text(data.name);
 		var allow_direct_link = <?php echo $allow_direct_link?'true':'false'; ?>;
         	if (!data.is_dir && !allow_direct_link)  $link.css('pointer-events','none');
-		var $dl_link = $('<a/>').attr('href','?do=download&file='+ encodeURIComponent(data.path))
-			.addClass('download').text('download');
-		var $delete_link = $('<a href="#" />').attr('data-file',data.path).addClass('delete').text('delete');
+		var allow_download = <?php echo $allow_download?'true':'false'; ?>;
+		var $dl_link = allow_download ? $('<a/>').attr('href','?do=download&file='+ encodeURIComponent(data.path))
+			.addClass('download').text('下载') : '';
+		var $delete_link = $('<a href="#"/>').attr('data-file',data.path).addClass('delete').text('删除');
 		var perms = [];
-		if(data.is_readable) perms.push('read');
-		if(data.is_writable) perms.push('write');
-		if(data.is_executable) perms.push('exec');
+		if(data.is_readable) perms.push('可读');
+		if(data.is_writable) perms.push('可写');
+		if(data.is_executable) perms.push('可执行');
 		var $html = $('<tr />')
 			.addClass(data.is_dir ? 'is_dir' : '')
 			.append( $('<td class="first" />').append($link) )
@@ -432,7 +430,7 @@ $(function(){
 	}
 	function renderBreadcrumbs(path) {
 		var base = "",
-			$html = $('<div/>').append( $('<a href=#>Home</a></div>') );
+			$html = $('<div/>').append( $('<a href=#>首页</a></div>') );
 		$.each(path.split('%2F'),function(k,v){
 			if(v) {
 				var v_as_text = decodeURIComponent(v);
@@ -444,11 +442,8 @@ $(function(){
 		return $html;
 	}
 	function formatTimestamp(unix_timestamp) {
-		var m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 		var d = new Date(unix_timestamp*1000);
-		return [m[d.getMonth()],' ',d.getDate(),', ',d.getFullYear()," ",
-			(d.getHours() % 12 || 12),":",(d.getMinutes() < 10 ? '0' : '')+d.getMinutes(),
-			" ",d.getHours() >= 12 ? 'PM' : 'AM'].join('');
+		return d.toLocaleString().replace(/:\d{1,2}$/,' '); ;
 	}
 	function formatFileSize(bytes) {
 		var s = ['bytes', 'KB','MB','GB','TB','PB','EB'];
@@ -463,8 +458,8 @@ $(function(){
 <div id="top">
    <?php if($allow_create_folder): ?>
 	<form action="?" method="post" id="mkdir" />
-		<label for=dirname>Create New Folder</label><input id=dirname type=text name=name value="" />
-		<input type="submit" value="create" />
+		<label for=dirname>新建文件夹</label><input id=dirname type=text name=name value="" />
+		<input type="submit" value="新建" />
 	</form>
 
    <?php endif; ?>
@@ -472,7 +467,7 @@ $(function(){
    <?php if($allow_upload): ?>
 
 	<div id="file_drop_target">
-		Drag Files Here To Upload
+		将文件拖到此处上传
 		<b>or</b>
 		<input type="file" multiple />
 	</div>
@@ -482,13 +477,12 @@ $(function(){
 
 <div id="upload_progress"></div>
 <table id="table"><thead><tr>
-	<th>Name</th>
-	<th>Size</th>
-	<th>Modified</th>
-	<th>Permissions</th>
-	<th>Actions</th>
+	<th>名称</th>
+	<th>大小</th>
+	<th>修改日期</th>
+	<th>权限</th>
+	<th>操作</th>
 </tr></thead><tbody id="list">
 
 </tbody></table>
-<footer>simple php filemanager by <a href="https://github.com/jcampbell1">jcampbell1</a></footer>
 </body></html>
